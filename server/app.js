@@ -1,23 +1,24 @@
-const express = require("express");
-const next = require("next");
-const session = require("express-session");
-const mongoose = require("mongoose");
-const logger = require("morgan");
-const mongoSessionStore = require("connect-mongo");
-const expressValidator = require("express-validator");
-const passport = require("passport");
-const helmet = require("helmet");
-const compression = require("compression");
+const express = require('express');
+const next = require('next');
+const session = require('express-session');
+const mongoose = require('mongoose');
+const logger = require('morgan');
+const mongoSessionStore = require('connect-mongo');
+const expressValidator = require('express-validator');
+const passport = require('passport');
+const helmet = require('helmet');
+const compression = require('compression');
+const bodyParser = require('body-parser');
 
 /* Loads all variables from .env file to "process.env" */
-require("dotenv").config();
+require('dotenv').config();
 /* Require our models here so we can use the mongoose.model() singleton to reference our models across our app */
-require("./models/Post");
-require("./models/User");
-const routes = require("./routes");
-require("./passport");
+require('./models/Post');
+require('./models/User');
+const routes = require('./routes');
+require('./passport');
 
-const dev = process.env.NODE_ENV !== "production";
+const dev = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
 const ROOT_URL = dev ? `http://localhost:${port}` : process.env.PRODUCTION_URL;
 const app = next({ dev });
@@ -34,9 +35,9 @@ mongoose
     process.env.MONGO_URI,
     mongooseOptions
   )
-  .then(() => console.log("DB connected"));
+  .then(() => console.log('DB connected'));
 
-mongoose.connection.on("error", err => {
+mongoose.connection.on('error', err => {
   console.log(`DB connection error: ${err.message}`);
 });
 
@@ -51,22 +52,23 @@ app.prepare().then(() => {
   }
 
   /* Body Parser built-in to Express as of version 4.16 */
-  server.use(express.json());
+  server.use(bodyParser.json());
+  server.use(bodyParser.urlencoded({ extended: false }));
   /* Express Validator will validate form data sent to the backend */
   server.use(expressValidator());
 
   /* give all Next.js's requests to Next.js server */
-  server.get("/_next/*", (req, res) => {
+  server.get('/_next/*', (req, res) => {
     handle(req, res);
   });
 
-  server.get("/static/*", (req, res) => {
+  server.get('/static/*', (req, res) => {
     handle(req, res);
   });
 
   const MongoStore = mongoSessionStore(session);
   const sessionConfig = {
-    name: "next-connect.sid",
+    name: 'next-connect.sid',
     // secret used for using signed cookies w/ the session
     secret: process.env.SESSION_SECRET,
     store: new MongoStore({
@@ -85,7 +87,7 @@ app.prepare().then(() => {
 
   if (!dev) {
     sessionConfig.cookie.secure = true; // serve secure cookies in production environment
-    server.set("trust proxy", 1); // trust first proxy
+    server.set('trust proxy', 1); // trust first proxy
   }
 
   /* Apply our session configuration to express-session */
@@ -104,13 +106,13 @@ app.prepare().then(() => {
   /* morgan for request logging from client
   - we use skip to ignore static files from _next folder */
   server.use(
-    logger("dev", {
-      skip: req => req.url.includes("_next")
+    logger('dev', {
+      skip: req => req.url.includes('_next')
     })
   );
 
   /* apply routes from the "routes" folder */
-  server.use("/", routes);
+  server.use('/', routes);
 
   /* Error handling from async / await functions */
   server.use((err, req, res, next) => {
@@ -119,16 +121,16 @@ app.prepare().then(() => {
   });
 
   /* create custom routes with route params */
-  server.get("/profile/:userId", (req, res) => {
+  server.get('/profile/:userId', (req, res) => {
     const routeParams = Object.assign({}, req.params, req.query);
-    return app.render(req, res, "/profile", routeParams);
+    return app.render(req, res, '/profile', routeParams);
   });
 
   /* default route
-     - allows Next to handle all other routes
-     - includes the numerous `/_next/...` routes which must    be exposedfor the next app to work correctly
-     - includes 404'ing on unknown routes */
-  server.get("*", (req, res) => {
+    - allows Next to handle all other routes
+    - includes the numerous `/_next/...` routes which must    be exposedfor the next app to work correctly
+    - includes 404'ing on unknown routes */
+  server.get('*', (req, res) => {
     handle(req, res);
   });
 
