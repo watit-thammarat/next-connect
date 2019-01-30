@@ -35,6 +35,7 @@ exports.signup = async (req, res, next) => {
   const user = new User({ name, email, password });
   await User.register(user, password, (err, user) => {
     if (err) {
+      console.log(err);
       return res.status(500).send(err.message);
     }
     res.json(user);
