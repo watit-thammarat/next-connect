@@ -15,30 +15,59 @@ import Slide from '@material-ui/core/Slide';
 import Gavel from '@material-ui/icons/Gavel';
 import VerifiedUserTwoTone from '@material-ui/icons/VerifiedUserTwoTone';
 import withStyles from '@material-ui/core/styles/withStyles';
+import Link from 'next/link';
 
 import { signupUser } from '../lib/auth';
 
+const Transition = props => <Slide {...props} direction="up" />;
+
 class Signup extends React.Component {
   state = {
+    user: '',
     name: '',
     email: '',
-    password: ''
+    password: '',
+    error: '',
+    openError: false,
+    openSuccess: false,
+    isLoading: false
   };
+
+  handleClose = () => this.setState({ openError: false });
 
   handleChange = e => {
     const { name, value } = e.target;
     this.setState({ [name]: value });
   };
 
-  handleSubmit = e => {
+  handleSubmit = async e => {
     e.preventDefault();
+    this.setState({
+      error: '',
+      openError: false,
+      openSuccess: false,
+      isLoading: true
+    });
     const { name, email, password } = this.state;
-    const user = { name, email, password };
-    signupUser(user);
+    let user = { name, email, password };
+    try {
+      user = await signupUser(user);
+      this.setState({ user: user.name, openSuccess: true });
+    } catch (err) {
+      this.showError(err);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
+
+  showError = err => {
+    const error = (err.response && err.response.data) || err.message;
+    this.setState({ error, openError: true });
   };
 
   render() {
     const { classes } = this.props;
+    const { error, openError, isLoading, openSuccess, user } = this.state;
     return (
       <div className={classes.root}>
         <Paper className={classes.paper}>
@@ -48,7 +77,6 @@ class Signup extends React.Component {
           <Typography variant="h5" component="h1">
             Sign up
           </Typography>
-
           <form className={classes.form} onSubmit={this.handleSubmit}>
             <FormControl margin="normal" required fullWidth>
               <InputLabel htmlFor="name">Name</InputLabel>
@@ -71,12 +99,44 @@ class Signup extends React.Component {
               fullWidth
               color="primary"
               variant="contained"
+              disabled={isLoading}
               className={classes.submit}
             >
-              Sign up
+              {isLoading ? 'Sigining up...' : 'Sign up'}
             </Button>
           </form>
+          {error && (
+            <Snackbar
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              open={openError}
+              onClose={this.handleClose}
+              autoHideDuration={6000}
+              message={<span className={classes.snack}>{error}</span>}
+            />
+          )}
         </Paper>
+        <Dialog
+          open={openSuccess}
+          disableBackdropClick={true}
+          TransitionComponent={Transition}
+        >
+          <DialogTitle>
+            <VerifiedUserTwoTone className={classes.icon} />
+            New Account
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              User {user} successfully created
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button color="primary" variant="contained">
+              <Link href="/signin">
+                <a className={classes.signinLink}>Sign in</a>
+              </Link>
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     );
   }
